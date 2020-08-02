@@ -23,7 +23,6 @@ RUN apt-get update && apt-get install -y \
       pdo_mysql \
       pdo_pgsql \
       pgsql \
-      zip \
       gd
 
 ENV APP_HOME /var/www/html
@@ -41,33 +40,22 @@ RUN chown -R www-data:www-data $APP_HOME
 COPY php.ini /usr/local/etc/php/
 
 
-# Install ImageMagick
-WORKDIR /home
-
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    wget \
-    vim
-
-RUN wget https://www.imagemagick.org/download/ImageMagick.tar.gz
-RUN tar xvzf ImageMagick.tar.gz
-WORKDIR /home/ImageMagick-7.0.10-25
-RUN ldconfig /usr/local/lib
-RUN ./configure
-RUN make
-RUN make install
-RUN ldconfig /usr/local/lib
-
-# Support HEIC images
+# ImageMagick (with HEIC)
 COPY sources.list /etc/apt/
 
 RUN apt-get update && apt-get --yes --force-yes install \
+    build-essential \
     automake \
-    libtool
+    libtool \
+    wget \
+    vim
 
 WORKDIR /home
+
 RUN git clone https://github.com/strukturag/libde265.git \
- && git clone https://github.com/strukturag/libheif.git
+ && git clone https://github.com/strukturag/libheif.git \
+ && wget https://www.imagemagick.org/download/ImageMagick.tar.gz \
+ && tar xvzf ImageMagick.tar.gz
 
 WORKDIR /home/libde265
 
@@ -85,10 +73,11 @@ RUN ./autogen.sh \
 
 WORKDIR /home/ImageMagick-7.0.10-25
 
-RUN ./configure --with-heic=yes \
+RUN ldconfig /usr/local/lib \
+ && ./configure --with-heic=yes \
  && make -j4 \
  && make install \
- && ldconfig
+ && ldconfig /usr/local/lib
 
 # Clean
 RUN apt-get clean \
